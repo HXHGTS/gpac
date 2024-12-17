@@ -3,80 +3,91 @@ name: Build MP4Box
 on:
   push:
     branches:
-    - master
+      - master
   pull_request:
     branches:
-    - master
+      - master
 
 jobs:
   build:
     runs-on: windows-latest
     strategy:
       matrix:
-        arch: [ x86, x64 ]
+        arch: [x86, x64]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Setup MSYS2
-      uses: msys2/setup-msys2@v2
-      with:
-        update: true
-        install: >-
-          mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain
-        msystem: ${{ matrix.arch == 'x86' && 'MINGW32' || 'MINGW64' }}
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            mingw-w64-i686-toolchain
+            mingw-w64-x86_64-toolchain
+          msystem: ${{ matrix.arch == 'x86' && 'MINGW32' || 'MINGW64' }}
 
-    - name: Add MSYS2 to PATH
-      run: echo "C:\\msys64\\mingw${{ matrix.arch == 'x86' && '32' || '64' }}\\bin" >> $GITHUB_PATH
+      - name: Add MSYS2 to PATH
+        run: echo "C:\\msys64\\mingw${{ matrix.arch == 'x86' && '32' || '64' }}\\bin" >> $GITHUB_PATH
 
-    - name: Install MSYS2 base packages
-      shell: msys2 {0}
-      run: |
-        pacman -Sy --noconfirm
-        pacman -S --noconfirm diffutils make
+      - name: Install MSYS2 base packages
+        shell: msys2 {0}
+        run: |
+          pacman -Sy --noconfirm
+          pacman -S --noconfirm diffutils make
 
-    - name: Install dependencies
-      shell: msys2 {0}
-      run: |
-        pacman -S --noconfirm mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-gcc \
-                               mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-pkg-config \
-                               mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-yasm
+      - name: Install dependencies
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-gcc \
+                                 mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-pkg-config \
+                                 mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-yasm
 
-    - name: Configure and build
-      shell: msys2 {0}
-      run: |
-        ./configure --host=${{ matrix.arch == 'x86' && 'i686-w64-mingw32' || 'x86_64-w64-mingw32' }} \
-                    --disable-x11 \
-                    --disable-glx \
-                    --disable-opengl \
-                    --disable-sdl \
-                    --disable-xvideo
-        make -j$(nproc)
+      - name: Configure and build
+        shell: msys2 {0}
+        run: |
+          ./configure --host=${{ matrix.arch == 'x86' && 'i686-w64-mingw32' || 'x86_64-w64-mingw32' }} \
+                      --disable-x11 \
+                      --disable-glx \
+                      --disable-opengl \
+                      --disable-sdl \
+                      --disable-xvideo
+          make -j$(nproc)
 
-    - name: Generate tag name
-      id: generate_tag_name
-      run: |
-        echo "::set-output name=tag_name::$(date +'%Y%m%d%H%M%S')"
-        echo "::set-output name=release_name::$(date +'%Y-%m-%d %H:%M:%S')"
+      - name: Generate tag name
+        id: generate_tag_name
+        run: |
+          echo "::set-output name=tag_name::$(date +'%Y%m%d%H%M%S')"
+          echo "::set-output name=release_name::$(date +'%Y-%m-%d %H:%M:%S')"
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.generate_tag_name.outputs.tag_name }}
-        release_name: ${{ steps.generate_tag_name.outputs.release_name }}
-        draft: false
-        prerelease: false
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.generate_tag_name.outputs.tag_name }}
+          release_name: ${{ steps.generate_tag_name.outputs.release_name }}
+          draft: false
+          prerelease: false
 
-    - name: Upload build
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./bin/gcc/mp4box.exe
-        asset_name: mp4box-${{ matrix.arch }}.exe
-        asset_content_type: application/octet-stream
+      - name: Upload MP4Box
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/gcc/mp4box.exe
+          asset_name: mp4box-${{ matrix.arch }}.exe
+          asset_content_type: application/octet-stream
+
+      - name: Upload libgpac
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./bin/gcc/libgpac.dll
+          asset_name: libgpac-${{ matrix.arch }}.dll
+          asset_content_type: application/octet-stream
