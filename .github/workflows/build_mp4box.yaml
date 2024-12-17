@@ -30,19 +30,24 @@ jobs:
     - name: Add MSYS2 to PATH
       run: echo "C:\\msys64\\mingw${{ matrix.arch == 'x86' && '32' || '64' }}\\bin" >> $GITHUB_PATH
 
-    - name: Install dependencies
+    - name: Install MSYS2 base packages
       shell: msys2 {0}
       run: |
         pacman -Sy --noconfirm
+        pacman -S --noconfirm diffutils make
+
+    - name: Install dependencies
+      shell: msys2 {0}
+      run: |
         pacman -S --noconfirm mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-gcc \
-                                 mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-pkg-config \
-                                 mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-make \
-                                 mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-yasm
+                               mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-pkg-config \
+                               mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-make \
+                               mingw-w64-${{ matrix.arch == 'x86' && 'i686' || 'x86_64' }}-yasm
 
     - name: Configure and build
       shell: msys2 {0}
       run: |
-        ./configure --host=${{ matrix.arch == 'x86' && 'i686-w64-mingw32' || 'x86_64-w64-mingw32' }} --disable-cli
+        ./configure --host=${{ matrix.arch == 'x86' && 'i686-w64-mingw32' || 'x86_64-w64-mingw32' }}
         make -j$(nproc)
 
     - name: Archive build
