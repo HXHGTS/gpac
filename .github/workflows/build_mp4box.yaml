@@ -54,14 +54,18 @@ jobs:
                     --disable-xvideo
         make -j$(nproc)
 
+    - name: Generate tag name
+      id: generate_tag_name
+      run: echo "::set-output name=tag_name::$(date +'%Y%m%d%H%M%S')"
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: $(date '+%Y%m%d%H%M%S')
-        release_name: Release $(date '+%Y-%m-%d %H:%M:%S')
+        tag_name: ${{ steps.generate_tag_name.outputs.tag_name }}
+        release_name: Release $(date +'%Y-%m-%d %H:%M:%S')
         draft: false
         prerelease: false
 
