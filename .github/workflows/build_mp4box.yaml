@@ -3,56 +3,59 @@ name: Build MP4Box
 on:
   push:
     branches:
-      - master
+    - master
   pull_request:
     branches:
-      - master
+    - master
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
-        arch: [x86, x64]
+        os: [ windows-latest ]
+        arch: [ x86, x64 ]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: >-
-            mingw-w64-i686-toolchain
-            mingw-w64-x86_64-toolchain
-          msystem: ${{ matrix.arch == 'x86' && 'MINGW32' || 'MINGW64' }}
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: >-
+          msys2 mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain
+        msystem: ${{ matrix.arch == 'x86' && 'MINGW32' || 'MINGW64' }}
 
-      - name: Install dependencies
-        run: |
-          pacman -S --noconfirm mingw-w64-${{ matrix.arch }}-gcc \
-                                 mingw-w64-${{ matrix.arch }}-pkg-config \
-                                 mingw-w64-${{ matrix.arch }}-make \
-                                 mingw-w64-${{ matrix.arch }}-yasm
+    - name: Add MSYS2 to PATH
+      run: echo "::add-path::C:\\msys64\\usr\\bin"
 
-      - name: Configure and build
-        run: |
-          ./configure --host=${{ matrix.arch }}-w64-mingw32 --disable-cli
-          make -j$(nproc)
+    - name: Install dependencies
+      run: |
+        pacman -Sy --noconfirm
+        pacman -S --noconfirm mingw-w64-${{ matrix.arch }}-gcc \
+                               mingw-w64-${{ matrix.arch }}-pkg-config \
+                               mingw-w64-${{ matrix.arch }}-make \
+                               mingw-w64-${{ matrix.arch }}-yasm
 
-      - name: Archive build
-        uses: actions/upload-artifact@v4
-        with:
-          name: mp4box-${{ matrix.arch }}
-          path: ./bin/gcc/
+    - name: Configure and build
+      run: |
+        ./configure --host=${{ matrix.arch }}-w64-mingw32 --disable-cli
+        make -j$(nproc)
 
-      - name: Upload build
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./bin/gcc/mp4box.exe
-          asset_name: mp4box-${{ matrix.arch }}.exe
-          asset_content_type: application/octet-stream
+    - name: Archive build
+      uses: actions/upload-artifact@v4
+      with:
+        name: mp4box-${{ matrix.arch }}
+        path: ./bin/gcc/
+
+    - name: Upload build
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./bin/gcc/mp4box.exe
+        asset_name: mp4box-${{ matrix.arch }}.exe
+        asset_content_type: application/octet-stream
