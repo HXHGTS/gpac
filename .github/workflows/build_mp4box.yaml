@@ -10,10 +10,9 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     strategy:
       matrix:
-        os: [ windows-latest ]
         arch: [ x86, x64 ]
 
     steps:
@@ -29,7 +28,7 @@ jobs:
         msystem: ${{ matrix.arch == 'x86' && 'MINGW32' || 'MINGW64' }}
 
     - name: Add MSYS2 to PATH
-      run: echo "C:\\msys64\\usr\\bin" >> $GITHUB_PATH
+      run: echo "C:\\msys64\\mingw${{ matrix.arch == 'x86' && '32' || '64' }}\\bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       shell: msys2 {0}
@@ -43,7 +42,7 @@ jobs:
     - name: Configure and build
       shell: msys2 {0}
       run: |
-        ./configure --host=${{ matrix.arch }}-w64-mingw32 --disable-cli
+        ./configure --host=${{ matrix.arch == 'x86' && 'i686-w64-mingw32' || 'x86_64-w64-mingw32' }} --disable-cli
         make -j$(nproc)
 
     - name: Archive build
